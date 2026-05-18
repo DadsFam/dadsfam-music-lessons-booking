@@ -1,0 +1,27 @@
+/* Student booking form styles */
+.mlb-wrap{max-width:640px;margin:28px auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#2d1810;}
+.mlb-form-head{color:#fff;border-radius:14px 14px 0 0;padding:28px;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.12);}
+.mlb-form-head .icon{font-size:38px;margin-bottom:8px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.2));}
+.mlb-form-head h2{margin:0;font-size:22px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.2);letter-spacing:.3px;}
+.mlb-form-head p{margin:9px 0 0;color:#fff;opacity:.97;font-size:14px;text-shadow:0 1px 2px rgba(0,0,0,.15);font-weight:500;}
+.mlb-form-body{background:#fff;border-radius:0 0 14px 14px;padding:24px;box-shadow:0 10px 36px rgba(0,0,0,.09);}
+.ms{margin-bottom:20px;}
+.mh{font-size:14px;font-weight:900;color:#2d1810;margin:0 0 11px;padding-bottom:8px;border-bottom:2px solid #e2e8f0;}
+.m2{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.mf{margin-bottom:9px;}
+.mf label{display:block;margin-bottom:5px;font-size:13px;font-weight:700;color:#374151;}
+.mr{color:#ef4444;}
+.mf input,.mf select,.mf textarea{width:100%;padding:10px 11px;border:2px solid #e2e8f0;border-radius:9px;font-size:14px;color:#2d1810;box-sizing:border-box;font-family:inherit;transition:.15s;background:#fff;}
+.mf input:focus,.mf select:focus,.mf textarea:focus{outline:none;box-shadow:0 0 0 3px rgba(227,104,104,.12);}
+.mlb-slg{display:flex;flex-wrap:wrap;gap:7px;}
+.mlb-sl{padding:8px 12px;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:13px;font-weight:800;background:#fff;color:#374151;transition:.15s;}
+.mlb-sl.sel{color:#fff;}
+.mlb-summary{border-radius:8px;padding:12px 15px;margin-bottom:14px;display:flex;gap:22px;flex-wrap:wrap;align-items:center;}
+.mlb-summary-item .label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:#64748b;}
+.mlb-summary-item .value{font-size:18px;font-weight:900;}
+.mlb-submit{width:100%;padding:13px;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;box-shadow:0 5px 20px rgba(0,0,0,.12);transition:.2s;text-shadow:0 1px 2px rgba(0,0,0,.15);}
+.mlb-submit:disabled{opacity:.5;cursor:not-allowed;}
+.mlb-msg{display:none;margin-top:12px;padding:12px;border-radius:9px;font-weight:700;text-align:center;font-size:14px;}
+.mlb-msg.ok{background:#d1fae5;color:#065f46;border:2px solid #6ee7b7;}
+.mlb-msg.err{background:#fee2e2;color:#991b1b;border:2px solid #fca5a5;}
+@media(max-width:500px){.m2{grid-template-columns:1fr;}}
