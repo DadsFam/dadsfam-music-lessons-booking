@@ -2,7 +2,7 @@
 
 **Complete Music Lesson Booking System for WordPress**
 
-**Version:** 5.1.3  
+**Version:** 5.3.17  
 **Author:** DadsFam  
 **Website:** [dadsfam.co.za](https://www.dadsfam.co.za)
 
@@ -64,21 +64,9 @@ Contact us anytime if you need help: **support@dadsfam.co.za**
 
 ### Changelog
 
-**5.1.3** (Current)
-- Licensing pattern fixed to match other DadsFam plugins (hourly cron + transient)
-- Added cancellation email sent to student when teacher cancels a lesson
-- Force-lock REST endpoint added
-- Improved stability
-
-**5.1.0**
-- Full DadsFam licensing integration
-- Plugin renamed to "DadsFam Music Lessons Booking System"
-
-**5.0.0**
-- Full teacher portal management
-- Rebuilt as proper multi-file plugin
-
-*(Full changelog inside the plugin → Music Lessons → Changelog)*
+**5.3.17** (Current)
+- Updated to latest version
+- Full plugin files uploaded
 
 ---
 
