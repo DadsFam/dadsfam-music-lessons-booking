@@ -65,8 +65,8 @@ Contact us anytime if you need help: **support@dadsfam.co.za**
 ### Changelog
 
 **5.3.17** (Current)
-- Updated to latest version
-- Full plugin files uploaded
+- Updated to latest version 5.3.17
+- Full plugin files updated
 
 ---
 
