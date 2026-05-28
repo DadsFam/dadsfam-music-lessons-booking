@@ -24,9 +24,11 @@ function mlb_sc_teacher(){
         'locked'    => '🔒 Too many wrong attempts. Please request a new code.',
         'nonce'     => '⚠️ Security token expired — please refresh and try again.',
         'system'    => '⚠️ System error — please contact the admin.',
-        // Password errors (fallback)
+        // Password login error
         'wrong_pw'  => '❌ Incorrect password. Please try again.',
     ];
+    // Auto-show password form if returning from a failed password attempt
+    $auto_show_pw = ($raw_err === 'wrong_pw');
     $err = $err_map[$raw_err] ?? '';
 
     // Remaining seconds on the current OTP (for countdown timer)
@@ -123,11 +125,11 @@ function mlb_sc_teacher(){
             <div style="flex:1;height:1px;background:#e2e8f0;"></div>
         </div>
 
-        <button onclick="document.getElementById('pw-fallback').style.display=document.getElementById('pw-fallback').style.display==='none'?'block':'none';this.style.display='none';"
-            style="width:100%;padding:10px;background:#f8fafc;border:2px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:#64748b;">
+        <button id="pw-toggle-btn" onclick="document.getElementById('pw-fallback').style.display='block';this.style.display='none';"
+            style="width:100%;padding:10px;background:#f8fafc;border:2px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:#64748b;<?php echo $auto_show_pw?'display:none;':''; ?>">
             🔑 Use password instead
         </button>
-        <div id="pw-fallback" style="display:none;margin-top:12px;">
+        <div id="pw-fallback" style="<?php echo $auto_show_pw?'':'display:none;'; ?>margin-top:12px;">
             <form method="post" action="<?php echo esc_url($clean); ?>">
                 <?php wp_nonce_field('mlb_teacher_login','_mlb_ln'); ?>
                 <input type="hidden" name="_mlb_page" value="<?php echo esc_attr($clean); ?>">
@@ -228,6 +230,8 @@ function mlb_sc_teacher(){
         $mc=(int)$wpdb->get_var("SELECT COUNT(*) FROM $bt WHERE status='confirmed' AND MONTH(lesson_date)=MONTH(CURDATE())");
         $mr=(float)$wpdb->get_var("SELECT SUM(price) FROM $bt WHERE status='confirmed' AND MONTH(lesson_date)=MONTH(CURDATE())");
         $tc=(int)$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $bt WHERE status='confirmed' AND lesson_date=%s",date('Y-m-d')));
+        $ep=(int)$wpdb->get_var("SELECT COUNT(*) FROM $bt WHERE payment_status='pending_eft' AND status='confirmed'");
+        $ev=(float)$wpdb->get_var("SELECT SUM(price) FROM $bt WHERE payment_status='pending_eft' AND status='confirmed'");
 
         $an   = wp_create_nonce('mlb_teacher_action');
         $ajurl= admin_url('admin-ajax.php');
@@ -248,13 +252,22 @@ function mlb_sc_teacher(){
         </div>
 
         <!-- Stats -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:16px;">
-            <?php foreach([['📅','Lessons This Month',$mc,$cp],['💰','Revenue This Month',$sym.number_format($mr,2),'#10b981'],['⏰',"Today's Lessons",$tc,$ca]] as $x): ?>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:16px;">
+            <?php foreach([['📅','Lessons This Month',$mc,$cp],['💰','Revenue This Month',$sym.number_format($mr,2),'#10b981'],['⏰',"Today's Lessons",$tc,$ca],['🏦','EFT Pending',$ep>0?$ep.' ('.$sym.number_format($ev,2).')':'0','#f59e0b']] as $x): ?>
             <div style="background:#fff;border-radius:11px;padding:15px 17px;box-shadow:0 2px 10px rgba(0,0,0,.07);border-top:4px solid <?php echo esc_attr($x[3]);?>;">
                 <div style="font-size:22px;font-weight:900;color:<?php echo esc_attr($x[3]);?>"><?php echo esc_html($x[2]);?></div>
                 <div style="font-size:12px;color:#64748b;margin-top:3px;"><?php echo esc_html($x[0].' '.$x[1]);?></div>
             </div>
             <?php endforeach; ?>
+        </div>
+
+        <!-- Bulk action bar (hidden until rows selected) -->
+        <div id="t-bulk-bar" style="display:none;background:#1e293b;border-radius:10px;padding:11px 16px;margin-bottom:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <span id="t-bulk-count" style="color:#fff;font-size:13px;font-weight:700;"></span>
+            <div style="display:flex;gap:8px;">
+                <button onclick="tBulkDelete()" style="padding:7px 16px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">🗑️ Delete Selected</button>
+                <button onclick="tClearSelection()" style="padding:7px 14px;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">✕ Clear</button>
+            </div>
         </div>
 
         <!-- Tabs -->
@@ -372,8 +385,25 @@ function mlb_sc_teacher(){
                         <p style="font-size:11px;color:#94a3b8;margin:4px 0 0;">Comma-separated — appears in the booking form</p>
                     </div>
                 </div>
+                <hr style="border:none;border-top:2px solid #e2e8f0;margin:16px 0;">
+                <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 10px;">📞 Contact Info for Emails</p>
+                <p style="font-size:12px;color:#94a3b8;margin:0 0 12px;">Shown at the bottom of every email — email, phone, or a link to your contact page.</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px;">
+                    <div>
+                        <label style="display:block;font-weight:700;font-size:12px;color:#374151;margin-bottom:5px;">Contact Email</label>
+                        <input type="email" id="ts-contact-email" value="<?php echo esc_attr($s['contact_email']??'');?>" placeholder="lessons@example.com" style="width:100%;padding:8px 10px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="display:block;font-weight:700;font-size:12px;color:#374151;margin-bottom:5px;">Contact Phone</label>
+                        <input type="text" id="ts-contact-phone" value="<?php echo esc_attr($s['contact_phone']??'');?>" placeholder="+27 82 123 4567" style="width:100%;padding:8px 10px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="display:block;font-weight:700;font-size:12px;color:#374151;margin-bottom:5px;">Contact URL</label>
+                        <input type="url" id="ts-contact-url" value="<?php echo esc_attr($s['contact_url']??'');?>" placeholder="https://..." style="width:100%;padding:8px 10px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;">
+                    </div>
+                </div>
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <button onclick="tsSaveRates()" style="padding:10px 22px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:900;cursor:pointer;">💾 Save Rates</button>
+                    <button onclick="tsSaveRates()" style="padding:10px 22px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:900;cursor:pointer;">💾 Save Rates &amp; Contact</button>
                     <span id="ts-rates-msg" style="font-size:13px;font-weight:700;"></span>
                 </div>
             </div>
@@ -413,7 +443,30 @@ function mlb_sc_teacher(){
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 140px;gap:14px;margin-bottom:16px;">
                     <div><label style="display:block;font-weight:700;font-size:12px;color:#374151;margin-bottom:5px;">Notes</label><textarea id="te-notes" rows="2" style="width:100%;padding:9px 11px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;font-family:inherit;resize:vertical;"></textarea></div>
-                    <div><label style="display:block;font-weight:700;font-size:12px;color:#374151;margin-bottom:5px;">Status</label><select id="te-status" style="width:100%;padding:9px 10px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;background:#fff;"><option value="confirmed">Confirmed</option><option value="cancelled">Cancelled</option></select></div>
+                    <div>
+                        <label style="display:block;font-weight:700;font-size:12px;color:#374151;margin-bottom:5px;">Booking Status</label>
+                        <select id="te-status" style="width:100%;padding:9px 10px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;background:#fff;margin-bottom:8px;">
+                            <option value="confirmed">✅ Confirmed</option>
+                            <option value="cancelled">🚫 Cancelled</option>
+                        </select>
+                        <label style="display:block;font-weight:700;font-size:12px;color:#374151;margin-bottom:5px;">Payment Status</label>
+                        <select id="te-paystatus" style="width:100%;padding:9px 10px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;background:#fff;">
+                            <option value="not_required">— N/A</option>
+                            <option value="pending">💳 Awaiting Card</option>
+                            <option value="pending_eft">🏦 EFT Pending</option>
+                            <option value="paid">✅ Paid</option>
+                            <option value="failed">❌ Failed</option>
+                            <option value="cancelled">↩ Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Notify student checkbox -->
+                <div style="background:#f0fdf4;border:2px solid #bbf7d0;border-radius:9px;padding:11px 14px;margin-bottom:14px;">
+                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:700;color:#065f46;">
+                        <input type="checkbox" id="t-notify-student" checked style="width:17px;height:17px;accent-color:#10b981;cursor:pointer;">
+                        📧 Send email notification to student
+                        <span style="font-weight:400;color:#6b7280;font-size:12px;">(updates, reschedules, cancellations, payment confirmations)</span>
+                    </label>
                 </div>
                 <div style="display:flex;gap:10px;align-items:center;">
                     <button type="submit" style="padding:10px 24px;background:linear-gradient(135deg,<?php echo esc_attr($cp);?>,<?php echo esc_attr($cs);?>);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:900;cursor:pointer;">💾 Save</button>
@@ -450,6 +503,42 @@ function mlb_sc_teacher(){
     }
     function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
 
+    // ── Bulk selection ───────────────────────────────────────────────
+    window.tSelectAll = function(masterCb){
+        document.querySelectorAll('.t-row-cb').forEach(function(cb){ cb.checked=masterCb.checked; });
+        tUpdateBulk();
+    };
+    window.tUpdateBulk = function(){
+        var checked=document.querySelectorAll('.t-row-cb:checked');
+        var bar=document.getElementById('t-bulk-bar');
+        var count=document.getElementById('t-bulk-count');
+        var master=document.getElementById('t-select-all');
+        var all=document.querySelectorAll('.t-row-cb');
+        if(checked.length>0){bar.style.display='flex';count.textContent=checked.length+' booking'+(checked.length>1?'s':'')+' selected';}
+        else bar.style.display='none';
+        if(master){ master.indeterminate=checked.length>0&&checked.length<all.length; if(checked.length===all.length&&all.length>0){master.checked=true;master.indeterminate=false;} }
+    };
+    window.tClearSelection = function(){
+        document.querySelectorAll('.t-row-cb').forEach(function(cb){ cb.checked=false; });
+        var m=document.getElementById('t-select-all');
+        if(m){m.checked=false;m.indeterminate=false;}
+        tUpdateBulk();
+    };
+    window.tBulkDelete = function(){
+        var checked=document.querySelectorAll('.t-row-cb:checked');
+        if(!checked.length) return;
+        if(!confirm('Permanently delete '+checked.length+' booking'+(checked.length>1?'s':'')+'?\n\nThis cannot be undone.')) return;
+        var ids=Array.from(checked).map(function(cb){return cb.value;});
+        var fd=new FormData();fd.append('action','mlb_t_bulk_delete');fd.append('_ajax_nonce',AN);
+        ids.forEach(function(id){fd.append('ids[]',id);});
+        fetch(AJ,{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(res){
+            if(res.success){
+                ids.forEach(function(id){var row=document.getElementById('t-bk-row-'+id);if(row)row.remove();});
+                tClearSelection();
+            } else alert(res.data||'Error');
+        });
+    };
+
     // ── Booking tabs ──
     window.tTab=function(t){
         tab=t;
@@ -475,24 +564,47 @@ function mlb_sc_teacher(){
             if(!res.success){w.innerHTML='<div style="padding:30px;text-align:center;color:#ef4444;">Error loading bookings.</div>';return;}
             var rows=res.data;
             if(!rows||!rows.length){w.innerHTML='<div style="padding:40px;text-align:center;color:#94a3b8;"><div style="font-size:36px;margin-bottom:8px;">📭</div><p>No bookings found.</p></div>';return;}
-            var h='<div style="overflow-x:auto;"><table><thead><tr><th>#</th><th>Student</th><th>Instrument</th><th>Date &amp; Time</th><th>Dur</th><th>Price</th><th>Code</th><th>Status</th><th style="min-width:180px;">Actions</th></tr></thead><tbody>';
+            var h='<div style="overflow-x:auto;"><table><thead><tr>'
+                +'<th style="width:36px;"><input type="checkbox" id="t-select-all" onchange="tSelectAll(this)" style="width:16px;height:16px;cursor:pointer;accent-color:'+CP+'"></th>'
+                +'<th>#</th><th>Student</th><th>Instrument</th><th>Date &amp; Time</th><th>Dur</th><th>Price</th><th>Code</th><th>Status</th><th>Payment</th><th style="min-width:200px;">Actions</th></tr></thead><tbody>';
             rows.forEach(function(b){
                 var isToday=(b.lesson_date===new Date().toISOString().slice(0,10));
                 var sc=b.status==='confirmed'?'#10b981':b.status==='cancelled'?'#ef4444':'#64748b';
                 var df=new Date(b.lesson_date+'T00:00:00').toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'});
                 var tf=b.lesson_time?b.lesson_time.slice(0,5):'';
                 try{tf=new Date('2000-01-01T'+b.lesson_time).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});}catch(e){}
-                h+='<tr><td style="color:#94a3b8;font-size:11px;">#'+b.id+'</td>'
+                h+='<tr id="t-bk-row-'+b.id+'">'
+                +'<td style="text-align:center;"><input type="checkbox" class="t-row-cb" value="'+b.id+'" onchange="tUpdateBulk()" style="width:16px;height:16px;cursor:pointer;accent-color:'+CP+'"></td>'
+                +'<td style="color:#94a3b8;font-size:11px;">#'+b.id+'</td>'
                 +'<td><strong>'+esc(b.student_name)+'</strong>'+(isToday?'<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:20px;font-size:10px;font-weight:800;margin-left:4px;">TODAY</span>':'')+'<br><small style="color:#94a3b8;">'+esc(b.student_email)+'</small>'+(b.student_phone?'<br><small style="color:#94a3b8;">'+esc(b.student_phone)+'</small>':'')+'</td>'
                 +'<td>'+esc(b.instrument)+'</td><td>'+df+'<br><small style="color:'+CP+';font-weight:700;">'+tf+'</small></td>'
                 +'<td>'+b.duration+'m</td><td><strong>'+SYM+parseFloat(b.price).toFixed(2)+'</strong></td>'
                 +'<td><code style="background:#fff7ed;color:'+CP+';padding:3px 7px;border-radius:5px;font-size:11px;font-weight:900;letter-spacing:1px;">'+esc(b.confirmation_code)+'</code></td>'
                 +'<td><span style="background:'+sc+'22;color:'+sc+';padding:3px 9px;border-radius:20px;font-size:11px;font-weight:800;">'+esc(b.status)+'</span></td>'
+                +'<td>'+tPayBadge(b.payment_method||'none',b.payment_status||'not_required')+'</td>'
                 +'<td><button class="t-action-btn" style="background:#dbeafe;color:#1e40af;" onclick=\'tEdit('+JSON.stringify(b)+')\'>✏️ Edit</button>'
+                +(b.payment_status==='pending_eft'?'<button class="t-action-btn" style="background:#d1fae5;color:#065f46;" onclick="tConfirmEFT('+b.id+',\''+esc(b.student_name)+'\')">✅ EFT Paid</button>':'')
                 +(b.status==='confirmed'?'<button class="t-action-btn" style="background:#fef3c7;color:#92400e;" onclick="tCancel('+b.id+',\''+esc(b.student_name)+'\')">🚫 Cancel</button>':'')
                 +'<button class="t-action-btn" style="background:#fee2e2;color:#991b1b;" onclick="tDelete('+b.id+',\''+esc(b.student_name)+'\')">🗑️ Delete</button></td></tr>';
             });
             w.innerHTML=h+'</tbody></table></div>';
+        });
+    };
+    // ── Payment badge renderer ──
+    function tPayBadge(method, status){
+        if(status==='paid'){var ic=method==='yoco'?'💳':'🏦';return '<span style="background:#d1fae5;color:#065f46;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:800;">'+ic+' Paid</span>';}
+        if(status==='pending_eft') return '<span style="background:#fef3c7;color:#92400e;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:800;">🏦 EFT Pending</span>';
+        if(status==='pending')     return '<span style="background:#dbeafe;color:#1e40af;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:800;">💳 Awaiting Card</span>';
+        if(status==='failed')      return '<span style="background:#fee2e2;color:#991b1b;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:800;">❌ Failed</span>';
+        if(status==='cancelled')   return '<span style="background:#f1f5f9;color:#64748b;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:800;">↩ Cancelled</span>';
+        return '<span style="background:#f1f5f9;color:#94a3b8;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:800;">— N/A</span>';
+    }
+    // ── Confirm EFT payment ──
+    window.tConfirmEFT=function(id,name){
+        if(!confirm('Confirm EFT payment received from '+name+'?\n\nA booking confirmation email will be sent to the student.')) return;
+        post('mlb_t_confirm_eft',{id:id},function(res){
+            if(res.success){ tLoad(); }
+            else alert(res.data||'Error');
         });
     };
     window.tClear=function(){document.getElementById('t-search').value='';document.getElementById('t-inst').value='';document.getElementById('t-dfr').value='';document.getElementById('t-dto').value='';tLoad();};
@@ -500,7 +612,7 @@ function mlb_sc_teacher(){
     window.tDelete=function(id,name){if(!confirm('PERMANENTLY DELETE booking for '+name+'?\nThis cannot be undone.')) return;post('mlb_t_delete',{id:id},function(res){if(res.success)tLoad();else alert(res.data||'Error');});};
     window.tEdit=function(b){
         ['id','code'].forEach(function(f){var el=document.getElementById('t-edit-'+f);if(el)el[f==='id'?'value':'textContent']=b[f==='id'?'id':'confirmation_code']||'';});
-        [['te-name','student_name'],['te-email','student_email'],['te-phone','student_phone'],['te-instr','instrument'],['te-date','lesson_date'],['te-time','lesson_time'],['te-dur','duration'],['te-price','price'],['te-notes','notes'],['te-status','status']].forEach(function(p){var el=document.getElementById(p[0]);if(el)el.value=p[1]==='lesson_time'?(b[p[1]]||'').slice(0,5):(b[p[1]]||'');});
+        [['te-name','student_name'],['te-email','student_email'],['te-phone','student_phone'],['te-instr','instrument'],['te-date','lesson_date'],['te-time','lesson_time'],['te-dur','duration'],['te-price','price'],['te-notes','notes'],['te-status','status'],['te-paystatus','payment_status']].forEach(function(p){var el=document.getElementById(p[0]);if(el)el.value=p[1]==='lesson_time'?(b[p[1]]||'').slice(0,5):(b[p[1]]||'');});
         document.getElementById('t-edit-msg').textContent='';
         document.getElementById('t-edit-panel').style.display='block';
         document.getElementById('t-edit-bg').style.display='block';
@@ -509,7 +621,7 @@ function mlb_sc_teacher(){
     window.tCloseEdit=function(){document.getElementById('t-edit-panel').style.display='none';document.getElementById('t-edit-bg').style.display='none';document.body.style.overflow='';};
     window.tSaveEdit=function(e){
         e.preventDefault();var msg=document.getElementById('t-edit-msg');msg.textContent='Saving…';msg.style.color='#64748b';
-        post('mlb_t_save',{id:document.getElementById('t-edit-id').value,student_name:document.getElementById('te-name').value,student_email:document.getElementById('te-email').value,student_phone:document.getElementById('te-phone').value,instrument:document.getElementById('te-instr').value,lesson_date:document.getElementById('te-date').value,lesson_time:document.getElementById('te-time').value,duration:document.getElementById('te-dur').value,price:document.getElementById('te-price').value,notes:document.getElementById('te-notes').value,status:document.getElementById('te-status').value},
+        post('mlb_t_save',{id:document.getElementById('t-edit-id').value,student_name:document.getElementById('te-name').value,student_email:document.getElementById('te-email').value,student_phone:document.getElementById('te-phone').value,instrument:document.getElementById('te-instr').value,lesson_date:document.getElementById('te-date').value,lesson_time:document.getElementById('te-time').value,duration:document.getElementById('te-dur').value,price:document.getElementById('te-price').value,notes:document.getElementById('te-notes').value,status:document.getElementById('te-status').value,payment_status:(document.getElementById('te-paystatus')||{value:'not_required'}).value,notify_student:(document.getElementById('t-notify-student')&&document.getElementById('t-notify-student').checked)?'1':'0'},
         function(res){if(res.success){msg.textContent='✅ Saved!';msg.style.color='#065f46';setTimeout(function(){tCloseEdit();tLoad();},800);}else{msg.textContent='❌ '+(res.data||'Error');msg.style.color='#991b1b';}});
     };
     // ── Settings ──
@@ -527,7 +639,7 @@ function mlb_sc_teacher(){
     };
     window.tsSaveRates=function(){
         var msg=document.getElementById('ts-rates-msg');msg.textContent='Saving…';msg.style.color='#64748b';
-        post('mlb_t_save_rates',{lesson_price:document.getElementById('ts-price').value,currency_symbol:document.getElementById('ts-currency').value,instruments:document.getElementById('ts-instruments').value},
+        post('mlb_t_save_rates',{lesson_price:document.getElementById('ts-price').value,currency_symbol:document.getElementById('ts-currency').value,instruments:document.getElementById('ts-instruments').value,contact_email:(document.getElementById('ts-contact-email')||{value:''}).value,contact_phone:(document.getElementById('ts-contact-phone')||{value:''}).value,contact_url:(document.getElementById('ts-contact-url')||{value:''}).value},
         function(res){msg.textContent=res.data;msg.style.color=res.success?'#065f46':'#991b1b';});
     };
     var curInp=document.getElementById('ts-currency'),curPrev=document.getElementById('ts-currency-preview');

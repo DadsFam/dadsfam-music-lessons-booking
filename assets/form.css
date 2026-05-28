@@ -1,27 +1,52 @@
-/* Student booking form styles */
-.mlb-wrap{max-width:640px;margin:28px auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#2d1810;}
+/* Music Lesson Booking — form.css v5.3.0 */
+.mlb-wrap{max-width:760px;margin:28px auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#2d1810;}
 .mlb-form-head{color:#fff;border-radius:14px 14px 0 0;padding:28px;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.12);}
 .mlb-form-head .icon{font-size:38px;margin-bottom:8px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.2));}
-.mlb-form-head h2{margin:0;font-size:22px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.2);letter-spacing:.3px;}
-.mlb-form-head p{margin:9px 0 0;color:#fff;opacity:.97;font-size:14px;text-shadow:0 1px 2px rgba(0,0,0,.15);font-weight:500;}
+.mlb-form-head h2{margin:0;font-size:22px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.2);}
+.mlb-form-head p{margin:9px 0 0;color:#fff;opacity:.97;font-size:14px;font-weight:500;}
 .mlb-form-body{background:#fff;border-radius:0 0 14px 14px;padding:24px;box-shadow:0 10px 36px rgba(0,0,0,.09);}
-.ms{margin-bottom:20px;}
-.mh{font-size:14px;font-weight:900;color:#2d1810;margin:0 0 11px;padding-bottom:8px;border-bottom:2px solid #e2e8f0;}
+.ms{margin-bottom:22px;}
+.mh{font-size:14px;font-weight:900;color:#2d1810;margin:0 0 12px;padding-bottom:9px;border-bottom:2px solid #e2e8f0;}
 .m2{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
-.mf{margin-bottom:9px;}
+.mf{margin-bottom:10px;}
 .mf label{display:block;margin-bottom:5px;font-size:13px;font-weight:700;color:#374151;}
 .mr{color:#ef4444;}
 .mf input,.mf select,.mf textarea{width:100%;padding:10px 11px;border:2px solid #e2e8f0;border-radius:9px;font-size:14px;color:#2d1810;box-sizing:border-box;font-family:inherit;transition:.15s;background:#fff;}
 .mf input:focus,.mf select:focus,.mf textarea:focus{outline:none;box-shadow:0 0 0 3px rgba(227,104,104,.12);}
-.mlb-slg{display:flex;flex-wrap:wrap;gap:7px;}
-.mlb-sl{padding:8px 12px;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:13px;font-weight:800;background:#fff;color:#374151;transition:.15s;}
-.mlb-sl.sel{color:#fff;}
+
+/* ── Calendar grid ─────────────────────────────────────────────────────────── */
+.mlb-cal-table{width:100%;border-collapse:collapse;font-size:12px;min-width:520px;}
+.mlb-cal-table th{padding:7px 6px;text-align:center;font-weight:800;font-size:11px;color:#64748b;border-bottom:2px solid #e2e8f0;position:sticky;top:0;background:#fff;z-index:1;}
+.mlb-cal-table th.today-hd{color:#1e293b;background:#fef3c7;}
+.mlb-cal-time{padding:5px 10px 5px 4px;text-align:right;font-size:11px;font-weight:700;color:#94a3b8;white-space:nowrap;vertical-align:middle;width:52px;}
+
+/* Slot cells */
+.mlb-slot{padding:4px 3px;text-align:center;border:1px solid #f1f5f9;vertical-align:middle;}
+.mlb-slot-av{background:#f0fdf4;cursor:pointer;transition:.12s;}
+.mlb-slot-av:hover{background:#bbf7d0;transform:scale(1.05);border-color:#6ee7b7;z-index:2;position:relative;}
+.mlb-slot-av .sc{display:inline-block;padding:4px 6px;border-radius:6px;font-size:11px;font-weight:700;color:#065f46;background:#d1fae5;border:1px solid #6ee7b7;width:88%;box-sizing:border-box;}
+.mlb-slot-bk{background:#fff5f5;cursor:not-allowed;}
+.mlb-slot-bk .sc{display:inline-block;padding:4px 6px;border-radius:6px;font-size:11px;font-weight:600;color:#fca5a5;background:#fee2e2;border:1px solid #fca5a5;width:88%;box-sizing:border-box;text-decoration:line-through;}
+.mlb-slot-off{background:#f8fafc;}
+.mlb-slot-off .sc{color:#e2e8f0;font-size:10px;}
+.mlb-slot-sel .sc{color:#fff!important;border-color:transparent!important;}
+.mlb-slot-past{background:#f8fafc;cursor:not-allowed;opacity:.5;}
+.mlb-slot-past .sc{color:#cbd5e1;background:#f1f5f9;}
+
+/* Today column highlight */
+.mlb-col-today{background:#fffdf0!important;}
+.mlb-col-today .sc{border-color:#fcd34d;}
+
+/* Closed day column */
+.mlb-day-closed{background:#f8fafc;}
+.mlb-day-closed-cell{background:#f8fafc;text-align:center;color:#cbd5e1;font-size:11px;vertical-align:middle;border:1px solid #f1f5f9;}
+
 .mlb-summary{border-radius:8px;padding:12px 15px;margin-bottom:14px;display:flex;gap:22px;flex-wrap:wrap;align-items:center;}
 .mlb-summary-item .label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:#64748b;}
 .mlb-summary-item .value{font-size:18px;font-weight:900;}
-.mlb-submit{width:100%;padding:13px;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;box-shadow:0 5px 20px rgba(0,0,0,.12);transition:.2s;text-shadow:0 1px 2px rgba(0,0,0,.15);}
-.mlb-submit:disabled{opacity:.5;cursor:not-allowed;}
+.mlb-submit{width:100%;padding:13px;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;box-shadow:0 5px 20px rgba(0,0,0,.12);transition:.2s;}
+.mlb-submit:disabled{opacity:.4;cursor:not-allowed;}
 .mlb-msg{display:none;margin-top:12px;padding:12px;border-radius:9px;font-weight:700;text-align:center;font-size:14px;}
 .mlb-msg.ok{background:#d1fae5;color:#065f46;border:2px solid #6ee7b7;}
 .mlb-msg.err{background:#fee2e2;color:#991b1b;border:2px solid #fca5a5;}
-@media(max-width:500px){.m2{grid-template-columns:1fr;}}
+@media(max-width:600px){.m2{grid-template-columns:1fr;}}

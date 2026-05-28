@@ -3,7 +3,7 @@
  * Plugin Name:  DadsFam Music Lessons Booking System
  * Plugin URI:   https://www.dadsfam.co.za
  * Description:  Complete music lesson booking system — teacher portal, overbooking prevention, email confirmations, custom form fields, colour customisation, and DadsFam license integration.
- * Version:      5.1.3
+ * Version:      5.3.17
  * Author:       DadsFam
  * Author URI:   https://www.dadsfam.co.za
  * License:      GPL v2 or later
@@ -58,7 +58,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'MLB_VERSION',   '5.1.3' );
+define( 'MLB_VERSION',   '5.3.17' );
 define( 'MLB_DIR',       plugin_dir_path( __FILE__ ) );
 define( 'MLB_URL',       plugin_dir_url( __FILE__ ) );
 define( 'MLB_PW_OPT',    'mlb_teacher_pw' );
@@ -67,6 +67,9 @@ define( 'MLB_PW_OPT',    'mlb_teacher_pw' );
 define( 'DFMLB_PRODUCT', 'dfmlb' );
 define( 'DFMLB_LIC_OPT', 'dfmlb_license' );
 define( 'DFMLB_API_URL', 'https://www.dadsfam.co.za/wp-json/dfem-licenses/v1/verify' );
+
+// Payment module (Yoco direct API + EFT)
+require_once MLB_DIR . 'includes/payment.php';
 
 // Load license first — registers force-lock endpoint and cron hook
 require_once MLB_DIR . 'includes/license.php';

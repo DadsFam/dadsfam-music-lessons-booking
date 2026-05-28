@@ -154,7 +154,7 @@ function mlb_handle_auth(): void {
             }
             wp_safe_redirect(add_query_arg('mlb_err','system',$back)); exit;
         }
-        wp_safe_redirect(add_query_arg('mlb_err','wrong',$back)); exit;
+        wp_safe_redirect(add_query_arg('mlb_err','wrong_pw',$back)); exit;
     }
 
     /* LOGOUT */

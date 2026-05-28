@@ -16,6 +16,9 @@ function mlb_pg_settings(){
         $s['booking_intro']=sanitize_textarea_field($_POST['booking_intro']??'');
         $s['confirm_message']=sanitize_textarea_field($_POST['confirm_message']??'');
         $s['notify_admin']=isset($_POST['notify_admin'])?1:0;
+        $s['contact_email'] = sanitize_email($_POST['contact_email']   ?? '');
+        $s['contact_phone'] = sanitize_text_field($_POST['contact_phone'] ?? '');
+        $s['contact_url']   = esc_url_raw($_POST['contact_url']        ?? '');
         for($d=0;$d<7;$d++) $s['business_hours'][$d]=[sanitize_text_field($_POST["bh_s$d"]??'off'),sanitize_text_field($_POST["bh_e$d"]??'off')];
         foreach(['phone','age','level','notes'] as $f){
             $s["field_{$f}"]=isset($_POST["field_{$f}"])?1:0;
@@ -34,6 +37,17 @@ function mlb_pg_settings(){
             $cfs[]=['id'=>'cf_'.sanitize_key($lbl).'_'.$i,'label'=>$lbl,'type'=>sanitize_text_field($cft[$i]??'text'),'options'=>sanitize_text_field($cfo[$i]??''),'required'=>isset($_POST['cf_req_'.$i])?1:0];
         }
         $s['custom_fields']=$cfs;
+        // ── Payment settings ─────────────────────────────────────────
+        $s['pay_yoco']             = isset($_POST['pay_yoco']) ? 1 : 0;
+        $s['pay_yoco_key']         = sanitize_text_field(wp_unslash($_POST['pay_yoco_key']     ?? ''));
+        $s['pay_yoco_pub_key']     = sanitize_text_field(wp_unslash($_POST['pay_yoco_pub_key'] ?? ''));
+        $s['pay_eft']              = isset($_POST['pay_eft'])  ? 1 : 0;
+        $s['pay_eft_holder']       = sanitize_text_field($_POST['pay_eft_holder']       ?? '');
+        $s['pay_eft_bank']         = sanitize_text_field($_POST['pay_eft_bank']         ?? '');
+        $s['pay_eft_account']      = sanitize_text_field($_POST['pay_eft_account']      ?? '');
+        $s['pay_eft_branch']       = sanitize_text_field($_POST['pay_eft_branch']       ?? '');
+        $s['pay_eft_ref']          = sanitize_text_field($_POST['pay_eft_ref']          ?? 'MLB-{code}');
+        $s['pay_eft_instructions'] = sanitize_textarea_field($_POST['pay_eft_instructions'] ?? '');
         update_option('mlb_settings',$s);
         echo '<div class="mlb-ok">✅ Settings saved successfully!</div>';
     }
@@ -48,7 +62,7 @@ function mlb_pg_settings(){
     <div class="wrap">
     <div class="mlb-hd"><div class="mlb-hd-i">⚙️</div><div><h1>Settings</h1><p>Pricing, hours, form fields, colours, and teacher access</p></div></div>
     <div class="mlb-tabs">
-        <?php foreach(['gen'=>'🏢 General','hrs'=>'🕐 Hours','fld'=>'📝 Form Fields','apr'=>'🎨 Appearance','tch'=>'🔐 Teacher Login','lic'=>'⭐ License'] as $id=>$lbl): ?>
+        <?php foreach(['gen'=>'🏢 General','hrs'=>'🕐 Hours','fld'=>'📝 Form Fields','apr'=>'🎨 Appearance','tch'=>'🔐 Teacher Login','pay'=>'💳 Payments','lic'=>'⭐ License'] as $id=>$lbl): ?>
         <button type="button" class="mlb-tab <?php echo $id==='gen'?'act':''; ?>" data-g="s" data-tab="<?php echo $id; ?>" onclick="mlbTab('s','<?php echo $id; ?>',this)"><?php echo $lbl; ?></button>
         <?php endforeach; ?>
     </div>
@@ -60,6 +74,12 @@ function mlb_pg_settings(){
                 <?php mlbf('Business / Studio Name','business_name','text',$s['business_name']??get_bloginfo('name'),'Used in confirmation emails'); ?>
                 <?php mlbf('Notification Email','teacher_email','email',$s['teacher_email']??get_option('admin_email'),'Receives new booking alerts'); ?>
                 <div class="mlb-fr"><label></label><label style="display:flex;align-items:center;gap:8px;padding-top:0;"><input type="checkbox" name="notify_admin" value="1" <?php checked(1,$s['notify_admin']??1); ?>><span style="font-size:13px;">Email me when a new booking is made</span></label></div>
+            </div>
+            <div class="mlb-card"><div class="mlb-ct">📞 Contact Info for Emails</div>
+                <p style="color:#64748b;font-size:13px;margin-bottom:14px;">These appear at the bottom of every email so students know how to reach you. Leave blank to hide.</p>
+                <?php mlbf('Contact Email','contact_email','email',$s['contact_email']??'','Shown as a mailto: link in emails'); ?>
+                <?php mlbf('Contact Phone','contact_phone','text',$s['contact_phone']??'','Shown as a tel: link — e.g. +27 82 123 4567'); ?>
+                <?php mlbf('Contact URL','contact_url','url',$s['contact_url']??'','Link to your contact page or WhatsApp chat'); ?>
             </div>
             <div class="mlb-card"><div class="mlb-ct">💰 Pricing &amp; Lessons</div>
                 <?php mlbf('Currency Symbol','currency_symbol','text',$s['currency_symbol']??'R','e.g. R, $, €, £','width:68px'); ?>
@@ -201,6 +221,119 @@ function mlb_pg_settings(){
             </div>
         </div>
 
+
+        <!-- PAYMENTS -->
+        <div id="mlb-p-pay" class="mlb-panel" data-g="s">
+            <!-- Yoco -->
+            <div class="mlb-card" style="border-left:4px solid #1e40af;">
+                <div class="mlb-ct">💳 Yoco — Card Payments (no WooCommerce required)</div>
+
+                <div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:13px;color:#1e40af;line-height:1.7;">
+                    <strong>🔑 Where to find your keys:</strong><br>
+                    Log in to <a href="https://portal.yoco.com" target="_blank" style="color:#1d4ed8;font-weight:700;">portal.yoco.com</a>
+                    → <strong>Settings</strong> → <strong>Developers</strong> → <strong>API Keys</strong>.<br><br>
+                    These are the <strong>exact same keys</strong> you use in your WooCommerce Yoco plugin —
+                    copy them directly from <strong>WooCommerce → Payments → Yoco</strong> if you already have it set up there.<br><br>
+                    Each key comes in two versions — use <strong>test keys</strong> while setting up and testing,
+                    switch to <strong>live keys</strong> when you're ready to take real payments:
+                    <ul style="margin:8px 0 0;padding-left:20px;">
+                        <li><code style="background:#dbeafe;padding:1px 5px;border-radius:4px;">pk_test_...</code> / <code style="background:#dbeafe;padding:1px 5px;border-radius:4px;">pk_live_...</code> — Public Key</li>
+                        <li><code style="background:#dbeafe;padding:1px 5px;border-radius:4px;">sk_test_...</code> / <code style="background:#dbeafe;padding:1px 5px;border-radius:4px;">sk_live_...</code> — Secret Key (keep this private!)</li>
+                    </ul>
+                </div>
+
+                <div class="mlb-fr"><label>Enable Yoco</label>
+                    <label class="mlb-tog"><input type="checkbox" name="pay_yoco" value="1" <?php checked(1,$s['pay_yoco']??0); ?>><span class="mlb-tsl"></span></label>
+                </div>
+
+                <div class="mlb-fr"><label>Public Key<br><small style="font-weight:400;color:#94a3b8;">pk_live_ or pk_test_</small></label>
+                    <div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input type="text" name="pay_yoco_pub_key"
+                                value="<?php echo esc_attr($s['pay_yoco_pub_key']??''); ?>"
+                                placeholder="pk_live_... or pk_test_..."
+                                style="min-width:320px;font-family:monospace;letter-spacing:1px;">
+                        </div>
+                        <p class="d">Your public-facing Yoco key — starts with <code>pk_</code>. Safe to store, used to identify your account.</p>
+                    </div>
+                </div>
+
+                <div class="mlb-fr"><label>Secret Key<br><small style="font-weight:400;color:#94a3b8;">sk_live_ or sk_test_</small></label>
+                    <div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input type="password" id="yoco-key-inp" name="pay_yoco_key"
+                                value="<?php echo esc_attr($s['pay_yoco_key']??''); ?>"
+                                placeholder="sk_live_... or sk_test_..."
+                                style="min-width:320px;font-family:monospace;letter-spacing:1px;">
+                            <button type="button" onclick="var i=document.getElementById('yoco-key-inp');i.type=i.type==='password'?'text':'password';" class="mlb-btn mlb-bg" style="padding:5px 10px;font-size:12px;">👁 Show</button>
+                        </div>
+                        <p class="d">Your private Yoco key — starts with <code>sk_</code>. <strong>Never share this.</strong> This is the key used to process payments.</p>
+                    </div>
+                </div>
+
+                <div style="background:#dbeafe;border-left:4px solid #1e40af;border-radius:8px;padding:11px 14px;font-size:13px;color:#1e40af;max-width:580px;">
+                    <strong>🧪 Test card:</strong> 4000 0000 0000 0002 · Any future expiry · Any CVC &nbsp;|&nbsp;
+                    <strong>💡 Tip:</strong> Test with <code>sk_test_</code> first, then swap to <code>sk_live_</code> for real payments.
+                </div>
+            </div>
+            <!-- EFT -->
+            <div class="mlb-card" style="border-left:4px solid #10b981;">
+                <div class="mlb-ct">🏦 EFT / Bank Transfer</div>
+                <p style="color:#64748b;font-size:13px;margin-bottom:14px;">
+                    Students pay by bank transfer. The slot is reserved immediately and you confirm payment from the teacher portal.
+                </p>
+                <div class="mlb-fr"><label>Enable EFT</label>
+                    <label class="mlb-tog"><input type="checkbox" name="pay_eft" value="1" <?php checked(1,$s['pay_eft']??0); ?>><span class="mlb-tsl"></span></label>
+                </div>
+                <?php
+                $eft_fields = [
+                    ['Account Holder','pay_eft_holder','text','Your name or studio name',''],
+                    ['Bank Name','pay_eft_bank','text','e.g. FNB, Capitec, Absa',''],
+                    ['Account Number','pay_eft_account','text','','font-family:monospace;letter-spacing:1px;'],
+                    ['Branch Code','pay_eft_branch','text','e.g. 250655','font-family:monospace;letter-spacing:1px;'],
+                    ['Payment Reference Format','pay_eft_ref','text','Use {code} for the booking code — e.g. MLB-{code}',''],
+                ];
+                foreach($eft_fields as [$lbl,$key,$type,$desc,$xs]):
+                ?>
+                <div class="mlb-fr"><label><?php echo $lbl;?></label>
+                    <div><input type="<?php echo $type;?>" name="<?php echo $key;?>"
+                        value="<?php echo esc_attr($s[$key]??'');?>" style="<?php echo $xs;?>">
+                        <?php if($desc): ?><p class="d"><?php echo $desc;?></p><?php endif;?>
+                    </div>
+                </div>
+                <?php endforeach;?>
+                <div class="mlb-fr"><label>Additional Instructions</label>
+                    <div><textarea name="pay_eft_instructions" rows="3" style="max-width:440px;width:100%;padding:7px 10px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;"><?php echo esc_textarea($s['pay_eft_instructions']??'');?></textarea>
+                    <p class="d">Shown to student in email and on screen — e.g. "Email proof of payment to..."</p></div>
+                </div>
+            </div>
+            <!-- Preview -->
+            <div class="mlb-card" style="background:#f8fafc;border:2px dashed #e2e8f0;">
+                <div class="mlb-ct">ℹ️ How it works</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:13px;">
+                    <div style="padding:12px 14px;background:#fff;border-radius:9px;border-left:4px solid #1e40af;">
+                        <strong style="color:#1e40af;">💳 Yoco flow</strong>
+                        <ol style="margin:8px 0 0;padding-left:16px;color:#475569;line-height:2;">
+                            <li>Student fills form, selects Card</li>
+                            <li>Redirected to Yoco checkout page</li>
+                            <li>Pays securely on Yoco</li>
+                            <li>Returns to site — booking confirmed</li>
+                            <li>Confirmation email sent automatically</li>
+                        </ol>
+                    </div>
+                    <div style="padding:12px 14px;background:#fff;border-radius:9px;border-left:4px solid #10b981;">
+                        <strong style="color:#10b981;">🏦 EFT flow</strong>
+                        <ol style="margin:8px 0 0;padding-left:16px;color:#475569;line-height:2;">
+                            <li>Student fills form, selects EFT</li>
+                            <li>Slot reserved immediately</li>
+                            <li>Bank details emailed to student</li>
+                            <li>Teacher marks as paid in portal</li>
+                            <li>Confirmation email sent to student</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
         <!-- LICENSE -->
         <div id="mlb-p-lic" class="mlb-panel" data-g="s">
             <?php
